@@ -51,6 +51,7 @@ class IDINClient
      * @return Issuer[]
      *
      * @throws IssuerConnectionException
+     * @throws \Http\Client\Exception
      */
     public function getIssuers() : array
     {
@@ -81,18 +82,20 @@ class IDINClient
     /**
      * @param Issuer $issuer
      * @param string $redirectUrl
+     * @param array|null $requestData
      *
      * @return IDINTransaction
      *
      * @throws IDINTransactionException
+     * @throws \Http\Client\Exception
      */
-    public function getIDINTransaction(Issuer $issuer, string $redirectUrl) : IDINTransaction
+    public function getIDINTransaction(Issuer $issuer, string $redirectUrl, array $requestData = []) : IDINTransaction
     {
         $uri = sprintf('%s/transaction', rtrim($this->url, '/'));
 
         $token = md5(time() . rand(1, 1000) . $issuer->getId() . $issuer->getName());
 
-        $requestData = [
+        $newRequestData = array_merge( [
             'merchant_token'      => $this->apiKey,
             'identity'            => true,
             'name'                => true,
@@ -106,12 +109,12 @@ class IDINClient
             'entrance_code'       => $token,
             'merchant_return_url' => $redirectUrl,
             'language'            => 'nl',
-        ];
+        ], $requestData );
 
         $request = new Request('POST', $uri, [
             'User-Agent' => $this->applicationName,
             'Content-Type' => 'application/json'
-        ], json_encode($requestData));
+        ], json_encode($newRequestData));
 
         $response = $this->httpClient->sendRequest($request);
 
@@ -135,6 +138,7 @@ class IDINClient
      * @return array
      *
      * @throws UserInfoException
+     * @throws \Http\Client\Exception
      */
     public function getUserInfo(IDINTransaction $IDINTransaction) : array
     {
